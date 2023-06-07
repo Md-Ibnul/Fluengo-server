@@ -30,7 +30,33 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
+
+    const usersCollection = client.db('fluengodb').collection('users')
+    const classesCollection = client.db('fluengodb').collection('classes')
+    const selectClassCollection = client.db('aircncDb').collection('selectClass')
+
+    // Save user Email and role im DB
+    app.put('/users/:email', async(req, res) => {
+        const email = req.params.email;
+        const user = req.body;
+        const query = {email: email}
+        const options = {upsert: true}
+        const updateDoc = {
+            $set: user
+        }
+        const result = await usersCollection.updateOne(query, updateDoc, options)
+        res.send(result);
+    })
+
+    // Get user
+    app.get('/users/:email', async(req, res) => {
+        const email = req.params.email;
+        const query = {email: email}
+        const result = await usersCollection.findOne(query)
+        res.send(result);
+    })
+    
+
     await client.connect();
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
