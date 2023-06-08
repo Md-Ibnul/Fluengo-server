@@ -2,6 +2,7 @@ const express = require('express')
 const app = express()
 const cors = require('cors')
 require('dotenv').config()
+const jwt = require('jsonwebtoken')
 const morgan = require('morgan')
 const port = process.env.PORT || 5000
 
@@ -28,12 +29,42 @@ const client = new MongoClient(uri, {
   }
 });
 
+
+// validate jwt
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization
+  if(!authorization){
+    return res.status(401).send({error: true, message: 'Unauthorized'});
+  }
+  const token = authorization.split(' ')[1];
+
+  // token verify
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if(err){
+      return res.status(401).send({error: true, message: 'Unauthorized access'})
+    }
+    req.decoded = decoded
+  })
+
+  next();
+}
+
 async function run() {
   try {
 
     const usersCollection = client.db('fluengodb').collection('users')
     const classesCollection = client.db('fluengodb').collection('classes')
     const selectClassCollection = client.db('aircncDb').collection('selectClass')
+
+
+    // Generate jwt token
+    app.post('/jwt', async(req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '1d'
+      });
+      res.send({token})
+    })
     
 // User related API
     // Save user Email and role im DB
@@ -50,7 +81,7 @@ async function run() {
     })
 
     // Get all users
-    app.get('/users', async(req, res) => {
+    app.get('/users', verifyJWT, async(req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     })
@@ -77,6 +108,34 @@ async function run() {
         }
       };
       const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    })
+
+     // check admin
+     app.get('/users/admin/:email', verifyJWT, async(req, res) => {
+      const email = req.params.email;
+
+      if(req.decoded.email !== email){
+        res.send({Admin: false})
+      }
+
+      const query = {email}
+      const user = await usersCollection.findOne(query);
+      const result = {admin: user?.role == 'Admin'}
+      res.send(result);
+    })
+
+     // check Instructor
+     app.get('/users/instructor/:email', verifyJWT, async(req, res) => {
+      const email = req.params.email;
+
+      if(req.decoded.email !== email){
+        res.send({instructor: false})
+      }
+
+      const query = {email}
+      const user = await usersCollection.findOne(query);
+      const result = {admin: user?.role == 'Instructor'}
       res.send(result);
     })
     
@@ -126,6 +185,7 @@ app.put('/classes/admin/:id', async (req, res) => {
   const result = await classesCollection.updateOne(filter, updateDoc, options);
   res.send(result)
 });
+
 
     await client.connect();
     // Send a ping to confirm a successful connection
