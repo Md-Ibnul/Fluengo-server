@@ -89,6 +89,13 @@ app .post('/classes', async(req, res) => {
   const result = await classesCollection.insertOne(cls)
   res.send(result)
 })
+// get all classes from db
+app.get('/rooms', async(req, res) => {
+  const result = await classesCollection.find().toArray()
+  res.send(result);
+})
+
+
 
     await client.connect();
     // Send a ping to confirm a successful connection
