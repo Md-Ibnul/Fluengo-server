@@ -86,16 +86,46 @@ async function run() {
 // save class to db
 app .post('/classes', async(req, res) => {
   const cls =req.body;
+      if(!cls){
+        return res.status(404).send({message: "Data not found, Not Valid Request."})
+      }
   const result = await classesCollection.insertOne(cls)
   res.send(result)
 })
 // get all classes from db
-app.get('/rooms', async(req, res) => {
+app.get('/classes', async(req, res) => {
   const result = await classesCollection.find().toArray()
   res.send(result);
 })
 
+// approve class
+app.patch('/classes/admin/:id', async(req, res) => {
+  const id = req.params.id;
+  const filter = {_id: new ObjectId(id)};
+  const updateDoc = {
+    $set: {
+      status: 'Approved'
+    }
+  };
+  const result = await classesCollection.updateOne(filter, updateDoc);
+  res.send(result);
+})
 
+// Deny class with feedback
+app.put('/classes/admin/:id', async (req, res) => {
+  const id = req.params.id;
+  const filter = {_id: new ObjectId(id)};
+  const options = {upsert: true};
+  const updatedStatus = req.body;
+  const updateDoc = {
+    $set: {
+      status: "Deny",
+      feedback: updatedStatus,
+    }
+  };
+  const result = await classesCollection.updateOne(filter, updateDoc, options);
+  res.send(result)
+});
 
     await client.connect();
     // Send a ping to confirm a successful connection
