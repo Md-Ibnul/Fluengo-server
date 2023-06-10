@@ -17,22 +17,10 @@ app.use(express.json())
 app.use(morgan('dev'))
 
 
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.3rhi256.mongodb.net/?retryWrites=true&w=majority`;
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
-
-
 // validate jwt
 const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization
+  console.log(authorization);
   if(!authorization){
     return res.status(401).send({error: true, message: 'Unauthorized'});
   }
@@ -48,6 +36,19 @@ const verifyJWT = (req, res, next) => {
 
   next();
 }
+
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.3rhi256.mongodb.net/?retryWrites=true&w=majority`;
+
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+
 
 async function run() {
   try {
@@ -65,6 +66,17 @@ async function run() {
       });
       res.send({token})
     })
+
+    // warning: use verifyJWT before using verifyAdmin
+    const verifyAdmin = async(req, res, next) => {
+      const email = req.decoded.email;
+      const query = {email: email}
+      const user = await usersCollection.findOne(query);
+      if(user?.role !== 'Admin'){
+        return res.status(403).send({error: true, message:'forbidden access'})
+      }
+      next();
+    }
     
 // User related API
     // Save user Email and role im DB
@@ -81,10 +93,19 @@ async function run() {
     })
 
     // Get all users
-    app.get('/users', verifyJWT, async(req, res) => {
+    app.get('/users', async(req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     })
+
+    // Get user
+    app.get('/users/:email', async(req, res) => {
+      const email = req.params.email;
+      const query = {email: email};
+      const result = await usersCollection.findOne(query)
+      res.send(result);
+  })
+  
 
     // make admin 
     app.patch('/users/admin/:id', async(req, res) => {
@@ -139,6 +160,13 @@ async function run() {
       res.send(result);
     })
     
+    // get popular  instructor
+    app.get('/users/instructors/fixed', async(req, res) => {
+      const query = {role: "Instructor"};
+      const result = await usersCollection.find(query).limit(6).toArray();
+      res.send(result);
+    })
+
 
 // class related API
 
@@ -154,6 +182,19 @@ app .post('/classes', async(req, res) => {
 // get all classes from db
 app.get('/classes', async(req, res) => {
   const result = await classesCollection.find().toArray()
+  res.send(result);
+})
+
+// Get Popular Classes
+app.get('/classes/approved/fixed', async(req, res) => {
+  const query = {status: "Approved"}
+  const result = await classesCollection.find(query).limit(6).toArray();
+  res.send(result);
+})
+// Get Popular Classes
+app.get('/classes/approved/all', async(req, res) => {
+  const query = {status: "Approved"}
+  const result = await classesCollection.find(query).toArray();
   res.send(result);
 })
 
