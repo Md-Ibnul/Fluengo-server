@@ -55,7 +55,7 @@ async function run() {
 
     const usersCollection = client.db('fluengodb').collection('users')
     const classesCollection = client.db('fluengodb').collection('classes')
-    const selectClassCollection = client.db('aircncDb').collection('selectClass')
+    const selectClassCollection = client.db('fluengodb').collection('selectClass')
 
 
     // Generate jwt token
@@ -226,6 +226,14 @@ app.put('/classes/admin/:id', async (req, res) => {
   const result = await classesCollection.updateOne(filter, updateDoc, options);
   res.send(result)
 });
+
+// Get filter classes for instructor
+app.get('/classes/instructor/:email', async(req, res) => {
+    const email = req.params.email;
+    const query = {'instructorEmail': email}
+    const result = await classesCollection.find(query).toArray()
+    res.send(result);
+})
 
 
     await client.connect();
