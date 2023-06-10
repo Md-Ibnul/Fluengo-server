@@ -268,6 +268,14 @@ app.get('/classes/selected', async(req, res) => {
     res.send(result);
 });
 
+// delete a booking from db
+app.delete('/classes/selected/:id', async(req, res) => {
+  const id = req.params.id;
+  const query = {_id: new ObjectId(id)}
+  const result = await selectClassCollection.deleteOne(query)
+  res.send(result);
+})
+
 
     await client.connect();
     // Send a ping to confirm a successful connection
