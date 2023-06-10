@@ -235,6 +235,39 @@ app.get('/classes/instructor/:email', async(req, res) => {
     res.send(result);
 })
 
+// select related DB
+
+// add select class to db
+app .post('/classes/selected', async(req, res) => {
+  const selected =req.body;
+  const result = await selectClassCollection.insertOne(selected);
+  res.send(result)
+})
+
+// Update class selected status
+app.patch('/classes/selected/:email', async(req, res) => {
+  const email = req.params.email;
+  const query = {"student.email": email}
+  const updateDoc = {
+      $set: {
+          place: "selected",
+      }
+  }
+  const update = await selectClassCollection.updateOne(query, updateDoc)
+  res.send(update);
+})
+
+// Get selected classes from db
+app.get('/classes/selected', async(req, res) => {
+  const email = req.query.email;
+  if(!email){
+    res.send([]);
+  }
+    const query = {"student.email": email}
+    const result = await selectClassCollection.find(query).toArray();
+    res.send(result);
+});
+
 
     await client.connect();
     // Send a ping to confirm a successful connection
