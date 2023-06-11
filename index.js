@@ -167,6 +167,13 @@ async function run() {
       res.send(result);
     })
 
+    // get popular  instructor
+    app.get('/users/instructors/all', async(req, res) => {
+      const query = {role: "Instructor"};
+      const result = await usersCollection.find(query).toArray();
+      res.send(result);
+    })
+
 
 // class related API
 
@@ -191,7 +198,7 @@ app.get('/classes/approved/fixed', async(req, res) => {
   const result = await classesCollection.find(query).limit(6).toArray();
   res.send(result);
 })
-// Get Popular Classes
+// Get all Classes
 app.get('/classes/approved/all', async(req, res) => {
   const query = {status: "Approved"}
   const result = await classesCollection.find(query).toArray();
