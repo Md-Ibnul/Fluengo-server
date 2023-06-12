@@ -234,7 +234,7 @@ app.put('/classes/admin/:id', async (req, res) => {
   const updatedStatus = req.body;
   const updateDoc = {
     $set: {
-      status: "Deny",
+      status: "Denied",
       feedback: updatedStatus,
     }
   };
