@@ -192,6 +192,14 @@ app.get('/classes', async(req, res) => {
   res.send(result);
 })
 
+// get a class from db
+app.get('/classes/oneClass/:id', async(req, res) => {
+  const id = req.params.id;
+  const query = {_id: new ObjectId(id)}
+  const result = await classesCollection.findOne(query);
+  res.send(result);
+})
+
 // Get Popular Classes
 app.get('/classes/approved/fixed', async(req, res) => {
   const query = {status: "Approved"}
@@ -234,10 +242,37 @@ app.put('/classes/admin/:id', async (req, res) => {
   res.send(result)
 });
 
+// update class
+app.put('/classes/update/:id', async (req, res) => {
+  const id = req.params.id;
+  const filter = {_id: new ObjectId(id)};
+  const options = {upsert: true};
+  const updatedClass = req.body;
+  const updateDoc = {
+    $set: {
+      className: updatedClass.className,
+      image: updatedClass.image,
+      price: updatedClass.price,
+      availableSeat: updatedClass.availableSeat,
+      description: updatedClass.description,
+      status: updatedClass.status,
+    }
+  };
+  const result = await classesCollection.updateOne(filter, updateDoc, options);
+  res.send(result)
+});
+
 // Get filter classes for instructor
 app.get('/classes/instructor/:email', async(req, res) => {
     const email = req.params.email;
     const query = {'instructorEmail': email}
+    const result = await classesCollection.find(query).toArray()
+    res.send(result);
+})
+// Get denied classes for instructor
+app.get('/classes/denied/:email', async(req, res) => {
+    const email = req.params.email;
+    const query = {'instructorEmail': email, 'status': 'Denied'}
     const result = await classesCollection.find(query).toArray()
     res.send(result);
 })
