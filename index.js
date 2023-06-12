@@ -356,10 +356,10 @@ app.post('/payments', verifyJWT, async(req, res) => {
 })
 
 // get enrolled classes with payment history
-app.get('/payments/selected/:email', async(req, res) => {
-  const email = req.body.email;
+app.get('/payments/:email', async(req, res) => {
+  const email = req.params.email;
   const query = {"student.email": email}
-  console.log(query);
+  console.log(query)
   const result = await paymentCollection.find(query).toArray();
   res.send(result);
 
