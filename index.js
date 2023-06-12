@@ -5,6 +5,7 @@ require('dotenv').config()
 const jwt = require('jsonwebtoken')
 const morgan = require('morgan')
 const port = process.env.PORT || 5000
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
 
 // middleware
 const corsOptions = {
@@ -56,6 +57,22 @@ async function run() {
     const usersCollection = client.db('fluengodb').collection('users')
     const classesCollection = client.db('fluengodb').collection('classes')
     const selectClassCollection = client.db('fluengodb').collection('selectClass')
+    const paymentCollection = client.db('fluengodb').collection('payments')
+
+
+    // generate client secret
+    app.post("/create-payment-intent", verifyJWT,  async (req, res) => {
+      const {price} = req.body;
+      if(price){
+        const amount = parseFloat(price) * 100
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: 'usd',
+          payment_method_types: ['card'],
+        })
+        res.send({clientSecret: paymentIntent.client_secret})
+      }
+    });
 
 
     // Generate jwt token
@@ -93,7 +110,7 @@ async function run() {
     })
 
     // Get all users
-    app.get('/users', async(req, res) => {
+    app.get('/users', verifyJWT, verifyAdmin, async(req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     })
@@ -178,7 +195,7 @@ async function run() {
 // class related API
 
 // save class to db
-app .post('/classes', async(req, res) => {
+app .post('/classes', verifyJWT, async(req, res) => {
   const cls =req.body;
       if(!cls){
         return res.status(404).send({message: "Data not found, Not Valid Request."})
@@ -263,14 +280,14 @@ app.put('/classes/update/:id', async (req, res) => {
 });
 
 // Get filter classes for instructor
-app.get('/classes/instructor/:email', async(req, res) => {
+app.get('/classes/instructor/:email', verifyJWT, async(req, res) => {
     const email = req.params.email;
     const query = {'instructorEmail': email}
     const result = await classesCollection.find(query).toArray()
     res.send(result);
 })
 // Get denied classes for instructor
-app.get('/classes/denied/:email', async(req, res) => {
+app.get('/classes/denied/:email', verifyJWT, async(req, res) => {
     const email = req.params.email;
     const query = {'instructorEmail': email, 'status': 'Denied'}
     const result = await classesCollection.find(query).toArray()
@@ -310,7 +327,15 @@ app.get('/classes/selected', async(req, res) => {
     res.send(result);
 });
 
-// delete a booking from db
+// Get a selected class from db
+app.get('/classes/selected/pay/:id', async(req, res) => {
+  const id = req.params.id;
+    const query = {_id: new ObjectId(id)}
+    const result = await selectClassCollection.findOne(query)
+    res.send(result);
+});
+
+// delete a selected class from db
 app.delete('/classes/selected/:id', async(req, res) => {
   const id = req.params.id;
   const query = {_id: new ObjectId(id)}
@@ -318,6 +343,27 @@ app.delete('/classes/selected/:id', async(req, res) => {
   res.send(result);
 })
 
+
+// payment related api
+app.post('/payments', verifyJWT, async(req, res) => {
+  const payment = req.body;
+  const insertResult = await paymentCollection.insertOne(payment);
+  const id = payment._id;
+  console.log(id);
+  const query = {_id: new ObjectId(id)};
+  const deleteResult = await selectClassCollection.deleteOne(query);
+  res.send({insertResult, deleteResult});
+})
+
+// get enrolled classes with payment history
+app.get('/payments/selected/:email', async(req, res) => {
+  const email = req.body.email;
+  const query = {"student.email": email}
+  console.log(query);
+  const result = await paymentCollection.find(query).toArray();
+  res.send(result);
+
+})
 
     await client.connect();
     // Send a ping to confirm a successful connection
